@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Checkout — Artisan</title>
+<meta name="description" content="Complete your order.">
+<link rel="stylesheet" href="css/global.css">
+<link rel="stylesheet" href="css/checkout.css">
+
+</head>
+<body>
+<header class="site-header">
+  <div class="nav-inner">
+    <a class="brand" href="index.html">Arti<span>san</span></a>
+    <nav class="nav-links">
+      <a href="index.html">About site</a>
+      <a href="home.html">Home</a>
+      <a href="shop.html">Shop</a>
+      <a href="artists.html">Artisans</a>
+      <a href="about.html">About</a>
+    </nav>
+    <div class="nav-actions">
+      <a href="cart.html" class="btn btn-ghost btn-sm">Cart · 2</a>
+      <a href="login.html" class="btn btn-outline btn-sm">Log in</a>
+      <a href="signup.html" class="btn btn-accent btn-sm">Sign up</a>
+    </div>
+  </div>
+</header>
+<main>
+
+<section class="container checkout-wrap">
+  <h1>Checkout</h1>
+  <div class="checkout-grid">
+    <div>
+      <div class="section-block">
+        <h3>1. Contact</h3>
+        <div class="field"><label>Email</label><input class="input" type="email" value="hello@example.com"></div>
+      </div>
+      <div class="section-block">
+        <h3>2. Shipping address</h3>
+        <div class="row-2">
+          <div class="field"><label>First name</label><input class="input" value="Élise"></div>
+          <div class="field"><label>Last name</label><input class="input" value="Moreau"></div>
+        </div>
+        <div class="field"><label>Address</label><input class="input" placeholder="Street and number"></div>
+        <div class="row-2">
+          <div class="field"><label>City</label><input class="input"></div>
+          <div class="field"><label>Postal code</label><input class="input"></div>
+        </div>
+        <div class="field"><label>Country</label><select class="select"><option>France</option><option>Belgium</option><option>Germany</option></select></div>
+      </div>
+      <div class="section-block">
+        <h3>3. Payment</h3>
+        <div class="pay-method">
+          <label><input type="radio" name="pay" checked> 💳 Card</label>
+          <label><input type="radio" name="pay"> 🅿️ PayPal</label>
+          <label><input type="radio" name="pay"> Apple Pay</label>
+        </div>
+        <div class="field" style="margin-top:16px"><label>Card number</label><input class="input" placeholder="1234 1234 1234 1234"></div>
+        <div class="row-2">
+          <div class="field"><label>Expiry</label><input class="input" placeholder="MM / YY"></div>
+          <div class="field"><label>CVC</label><input class="input" placeholder="123"></div>
+        </div>
+      </div>
+      <a href="orders.html" class="btn btn-accent btn-lg btn-block">Place order — €132.00</a>
+    </div>
+    <aside class="summary">
+      <h3>Your order</h3>
+      <div class="item"><div class="sw"></div><div class="name"><div>Speckled stoneware bowl</div><div class="m">Maison Clay × 1</div></div><div>€42</div></div>
+      <div class="item"><div class="sw t2"></div><div class="name"><div>Linen runner — rust</div><div class="m">Atelier Rouge × 1</div></div><div>€68</div></div>
+      <div class="line" style="margin-top:14px"><span>Subtotal</span><span>€110.00</span></div>
+      <div class="line"><span>Shipping</span><span>Free</span></div>
+      <div class="line"><span>VAT (20%)</span><span>€22.00</span></div>
+      <div class="line total"><span>Total</span><span>€132.00</span></div>
+    </aside>
+  </div>
+</section>
+
+</main>
+<footer class="site-footer">
+  <div class="container">
+    <div>
+      <a class="brand" href="index.html">Arti<span>san</span></a>
+      <p class="footer-tag">A cooperative marketplace for handmade pottery, textiles, jewelry, and woodwork from independent makers.</p>
+    </div>
+    <div>
+      <h4>Shop</h4>
+      <a href="shop.html">All products</a>
+      <a href="shop.html?cat=ceramics">Ceramics</a>
+      <a href="shop.html?cat=textiles">Textiles</a>
+      <a href="shop.html?cat=jewelry">Jewelry</a>
+    </div>
+    <div>
+      <h4>Makers</h4>
+      <a href="artists.html">All artisans</a>
+      <a href="signup.html?role=artisan">Become a maker</a>
+      <a href="dashboard.html">Maker dashboard</a>
+    </div>
+    <div>
+      <h4>Company</h4>
+      <a href="about.html">About</a>
+      <a href="contact.html">Contact</a>
+      <a href="#">Help center</a>
+    </div>
+  </div>
+  <div class="footer-bottom">© 2026 Artisan — Made with care for the makers.</div>
+</footer>
+</body>
+</html>

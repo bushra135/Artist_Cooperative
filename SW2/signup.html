@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sign up — Artisan</title>
+<meta name="description" content="Create an Artisan account as a shopper or as a maker.">
+<link rel="stylesheet" href="css/global.css">
+<link rel="stylesheet" href="css/auth.css">
+</head>
+<body class="auth-body">
+<header class="site-header">
+  <div class="nav-inner">
+    <a class="brand" href="index.html">Arti<span>san</span></a>
+    <a href="index.html" class="btn btn-ghost btn-sm">← Back to site</a>
+  </div>
+</header>
+<main class="auth-main">
+
+<div class="auth-card auth-card-wide">
+  <h1>Create an account</h1>
+  <p class="sub">Already a member? <a href="login.html">Log in</a></p>
+
+  <div class="role-tabs">
+    <button class="role-tab active" data-role="shopper"><span class="ico">🛍️</span> I'm a Shopper</button>
+    <button class="role-tab" data-role="maker"><span class="ico">🎨</span> I'm an Artisan</button>
+  </div>
+
+  <!-- SHOPPER form -->
+  <form class="role-form" data-form="shopper">
+    <p class="form-intro">Browse handmade goods, save favourites and check out securely.</p>
+    <div class="field"><label>Full name</label><input class="input" placeholder="Élise Moreau" required></div>
+    <div class="field"><label>Email</label><input class="input" type="email" placeholder="you@example.com" required></div>
+    <div class="field"><label>Password</label><input class="input" type="password" placeholder="At least 8 characters" required></div>
+    <div class="grid-2">
+      <div class="field"><label>Phone <span class="opt">(optional)</span></label><input class="input" placeholder="+33 …"></div>
+      <div class="field"><label>City / Country <span class="opt">(optional)</span></label><input class="input" placeholder="Lyon, France"></div>
+    </div>
+    <button class="btn btn-accent btn-block btn-lg" type="submit">Create shopper account</button>
+    <button type="button" class="social-btn">🔵 Continue with Google</button>
+  </form>
+
+  <!-- MAKER form -->
+  <form class="role-form hidden" data-form="maker">
+    <p class="form-intro">Open a studio, list pieces and ship directly to customers worldwide.</p>
+    <div class="grid-2">
+      <div class="field"><label>Full name</label><input class="input" placeholder="Élise Moreau" required></div>
+      <div class="field"><label>Shop / studio name</label><input class="input" placeholder="Maison Clay" required></div>
+    </div>
+    <div class="grid-2">
+      <div class="field"><label>Email</label><input class="input" type="email" placeholder="you@studio.com" required></div>
+      <div class="field"><label>Password</label><input class="input" type="password" placeholder="At least 8 characters" required></div>
+    </div>
+    <div class="grid-2">
+      <div class="field"><label>Craft specialty</label><input class="input" placeholder="e.g. Pottery, Jewelry" required></div>
+      <div class="field"><label>Based in</label><input class="input" placeholder="City, Country" required></div>
+    </div>
+    <div class="field">
+      <label>Artisan bio</label>
+      <textarea class="input" rows="4" placeholder="Tell shoppers about your craft, materials, and story…" required></textarea>
+      <span class="hint">Min. 20 characters — this is the first thing shoppers read on your shop page.</span>
+    </div>
+    <div class="grid-2">
+      <div class="field"><label>Website <span class="opt">(optional)</span></label><input class="input" placeholder="https://"></div>
+      <div class="field"><label>Phone <span class="opt">(optional)</span></label><input class="input" placeholder="+33 …"></div>
+    </div>
+    <div class="field check">
+      <label><input type="checkbox" required> I agree to the <a href="#">Maker Terms</a> and ship within 5 business days.</label>
+    </div>
+    <button class="btn btn-accent btn-block btn-lg" type="submit">Open my studio</button>
+    <button type="button" class="social-btn">🔵 Continue with Google</button>
+  </form>
+
+  <p class="auth-foot">By signing up you agree to our <a href="#">Terms</a> and <a href="#">Privacy Policy</a>.</p>
+</div>
+
+</main>
+<script>
+  // Tiny tab switcher (mockup behavior)
+  document.querySelectorAll('.role-tab').forEach(tab=>{
+    tab.addEventListener('click',()=>{
+      const role=tab.dataset.role;
+      document.querySelectorAll('.role-tab').forEach(t=>t.classList.toggle('active',t===tab));
+      document.querySelectorAll('.role-form').forEach(f=>f.classList.toggle('hidden',f.dataset.form!==role));
+    });
+  });
+  // Open maker tab if ?role=artisan
+  if(new URLSearchParams(location.search).get('role')==='artisan'){
+    document.querySelector('.role-tab[data-role="maker"]').click();
+  }
+</script>
+</body>
+</html>

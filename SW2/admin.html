@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admin — Artisan</title>
+<meta name="description" content="Manage users, artisans, products and orders.">
+<link rel="stylesheet" href="css/global.css">
+<link rel="stylesheet" href="css/admin.css">
+
+</head>
+<body>
+<header class="site-header">
+  <div class="nav-inner">
+    <a class="brand" href="index.html">Arti<span>san</span></a>
+    <nav class="nav-links">
+      <a href="index.html">About site</a>
+      <a href="home.html">Home</a>
+      <a href="shop.html">Shop</a>
+      <a href="artists.html">Artisans</a>
+      <a href="about.html">About</a>
+    </nav>
+    <div class="nav-actions">
+      <a href="cart.html" class="btn btn-ghost btn-sm">Cart · 2</a>
+      <a href="login.html" class="btn btn-outline btn-sm">Log in</a>
+      <a href="signup.html" class="btn btn-accent btn-sm">Sign up</a>
+    </div>
+  </div>
+</header>
+<main>
+
+<section class="container admin-wrap">
+  <div class="admin-head">
+    <div>
+      <span class="badge">Admin</span>
+      <h1 style="margin-top:8px">Admin dashboard</h1>
+      <p class="muted">Manage the entire Artisan marketplace.</p>
+    </div>
+    <a href="#" class="btn btn-accent">+ Invite admin</a>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="l">Users</div><div class="v">1,284</div></div>
+    <div class="kpi"><div class="l">Artisans</div><div class="v">218</div></div>
+    <div class="kpi"><div class="l">Products live</div><div class="v">3,142</div></div>
+    <div class="kpi"><div class="l">Orders this month</div><div class="v">476</div></div>
+  </div>
+
+  <div class="tabs">
+    <a href="#" class="active">Users</a>
+    <a href="#">Artisans</a>
+    <a href="#">Products</a>
+    <a href="#">Orders</a>
+    <a href="#">Admin team</a>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <h3>Users</h3>
+      <div style="display:flex;gap:10px">
+        <select class="select" style="width:auto"><option>All roles</option><option>Customer</option><option>Artisan</option><option>Admin</option></select>
+      </div>
+    </div>
+    <div class="search-row"><input class="input" placeholder="Search by name or email..."></div>
+    <table class="table">
+      <thead><tr><th>User</th><th>Email</th><th>Role</th><th>Joined</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>
+        <tr><td><span class="av-sm"></span><strong>Élise Moreau</strong></td><td>elise@example.com</td><td><span class="badge">Customer</span></td><td>Mar 2025</td><td><span class="badge badge-success">Active</span></td><td><a href="#">Promote</a> · <a href="#" style="color:var(--destructive)">Suspend</a></td></tr>
+        <tr><td><span class="av-sm" style="background:var(--accent)"></span><strong>Maison Clay</strong></td><td>contact@maisonclay.fr</td><td><span class="badge badge-sage">Artisan</span></td><td>Feb 2024</td><td><span class="badge badge-success">Verified</span></td><td><a href="#">View shop</a> · <a href="#" style="color:var(--destructive)">Suspend</a></td></tr>
+        <tr><td><span class="av-sm" style="background:var(--warning)"></span><strong>Studio Petra</strong></td><td>hi@studiopetra.gr</td><td><span class="badge badge-sage">Artisan</span></td><td>Jan 2025</td><td><span class="badge badge-warn">Pending</span></td><td><a href="#">Verify</a> · <a href="#" style="color:var(--destructive)">Reject</a></td></tr>
+        <tr><td><span class="av-sm" style="background:var(--fg)"></span><strong>Tomás Riera</strong></td><td>tomas@artisan.coop</td><td><span class="badge badge-accent">Admin</span></td><td>Jan 2024</td><td><span class="badge badge-success">Active</span></td><td><a href="#">Edit</a></td></tr>
+        <tr><td><span class="av-sm"></span><strong>Marc Lefèvre</strong></td><td>marc@example.com</td><td><span class="badge">Customer</span></td><td>Apr 2026</td><td><span class="badge badge-success">Active</span></td><td><a href="#">Promote</a> · <a href="#" style="color:var(--destructive)">Suspend</a></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><h3>Recent products</h3><a href="#" class="btn btn-outline btn-sm">View all</a></div>
+    <table class="table">
+      <thead><tr><th>Product</th><th>Maker</th><th>Price</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        <tr><td><strong>Speckled stoneware bowl</strong></td><td>Maison Clay</td><td>€42</td><td><span class="badge badge-success">Live</span></td><td><a href="#" style="color:var(--destructive)">Remove</a></td></tr>
+        <tr><td><strong>Hammered brass earrings</strong></td><td>Studio Petra</td><td>€55</td><td><span class="badge badge-warn">Pending review</span></td><td><a href="#">Approve</a> · <a href="#" style="color:var(--destructive)">Reject</a></td></tr>
+        <tr><td><strong>Linen runner — rust</strong></td><td>Atelier Rouge</td><td>€68</td><td><span class="badge badge-success">Live</span></td><td><a href="#" style="color:var(--destructive)">Remove</a></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><h3>Admin team</h3></div>
+    <table class="table">
+      <thead><tr><th>Admin</th><th>Email</th><th>Added</th><th></th></tr></thead>
+      <tbody>
+        <tr><td><span class="av-sm" style="background:var(--fg)"></span><strong>Tomás Riera</strong></td><td>tomas@artisan.coop</td><td>Founder</td><td>—</td></tr>
+        <tr><td><span class="av-sm" style="background:var(--accent)"></span><strong>Élise Moreau</strong></td><td>elise@artisan.coop</td><td>Founder</td><td>—</td></tr>
+        <tr><td><span class="av-sm" style="background:var(--warning)"></span><strong>Yara Haddad</strong></td><td>yara@artisan.coop</td><td>Mar 2025</td><td><a href="#" style="color:var(--destructive)">Remove</a></td></tr>
+      </tbody>
+    </table>
+    <form style="display:flex;gap:8px;margin-top:14px">
+      <input class="input" placeholder="new-admin@artisan.coop" style="flex:1">
+      <button class="btn btn-accent">Send invite</button>
+    </form>
+  </div>
+</section>
+
+</main>
+<footer class="site-footer">
+  <div class="container">
+    <div>
+      <a class="brand" href="index.html">Arti<span>san</span></a>
+      <p class="footer-tag">A cooperative marketplace for handmade pottery, textiles, jewelry, and woodwork from independent makers.</p>
+    </div>
+    <div>
+      <h4>Shop</h4>
+      <a href="shop.html">All products</a>
+      <a href="shop.html?cat=ceramics">Ceramics</a>
+      <a href="shop.html?cat=textiles">Textiles</a>
+      <a href="shop.html?cat=jewelry">Jewelry</a>
+    </div>
+    <div>
+      <h4>Makers</h4>
+      <a href="artists.html">All artisans</a>
+      <a href="signup.html?role=artisan">Become a maker</a>
+      <a href="dashboard.html">Maker dashboard</a>
+    </div>
+    <div>
+      <h4>Company</h4>
+      <a href="about.html">About</a>
+      <a href="contact.html">Contact</a>
+      <a href="#">Help center</a>
+    </div>
+  </div>
+  <div class="footer-bottom">© 2026 Artisan — Made with care for the makers.</div>
+</footer>
+</body>
+</html>

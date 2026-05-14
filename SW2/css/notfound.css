@@ -1,0 +1,5 @@
+
+.nf{flex:1;display:flex;align-items:center;justify-content:center;padding:80px 20px;text-align:center}
+.nf h1{font-size:120px;color:var(--accent);margin-bottom:0;line-height:1}
+.nf h2{font-size:28px;margin-bottom:14px}
+.nf p{opacity:.7;max-width:420px;margin:0 auto 24px}

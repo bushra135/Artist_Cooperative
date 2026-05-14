@@ -1,0 +1,7 @@
+
+.contact{padding:60px 0 80px;display:grid;grid-template-columns:1fr 1fr;gap:48px}
+.contact h1{margin-bottom:14px}
+.contact .info{font-size:15px;line-height:1.8;opacity:.85}
+.contact .info strong{display:block;margin-top:14px;font-family:'Fraunces',serif;font-size:18px}
+.form{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:28px}
+@media (max-width:820px){.contact{grid-template-columns:1fr}}

@@ -1,0 +1,14 @@
+
+.orders-wrap{padding:40px 0 80px}
+.orders-wrap h1{margin-bottom:24px}
+.order-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px 24px;margin-bottom:16px}
+.order-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:12px}
+.order-head .id{font-weight:600}
+.order-head .date{font-size:13px;opacity:.6}
+.order-items{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.order-items .it{display:flex;gap:10px;align-items:center;font-size:14px}
+.order-items .sw{width:48px;height:48px;border-radius:6px;background:var(--secondary)}
+.order-items .sw.t2{background:var(--accent)}
+.order-items .sw.t3{background:var(--warning)}
+.order-foot{display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
+.total{font-weight:600;font-size:17px}
