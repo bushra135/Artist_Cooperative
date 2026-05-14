@@ -1,3 +1,20 @@
+<?php
+session_start();
+include 'connection.php';
+
+$artisan_id = 1;
+
+$stmt = $db->prepare("
+SELECT shop_name
+FROM artisan_profiles
+WHERE artisan_id = ?
+");
+
+$stmt->execute([$artisan_id]);
+
+$artisan = $stmt->fetch(PDO::FETCH_ASSOC);
+?>
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -78,47 +95,56 @@
 <body>
 <header class="site-header">
   <div class="nav-inner">
-    <a class="brand" href="index.html">Arti<span>san</span></a>
+    <a class="brand" href="index.php">Arti<span>san</span></a>
+
     <nav class="nav-links">
-      <a href="index.html">About site</a>
-      <a href="home.html">Home</a>
-      <a href="shop.html">Shop</a>
-      <a href="artists.html">Artisans</a>
-      <a href="about.html">About</a>
+      <a href="index.php">About site</a>
+      <a href="home.php">Home</a>
+      <a href="shop.php">Shop</a>
+      <a href="artists.php">Artisans</a>
+      <a href="about.php">About</a>
     </nav>
+
     <div class="nav-actions">
-      <a href="cart.html" class="btn btn-ghost btn-sm">Cart · 2</a>
-      <a href="login.html" class="btn btn-outline btn-sm">Log in</a>
-      <a href="signup.html" class="btn btn-accent btn-sm">Sign up</a>
+      <a href="cart.php" class="btn btn-ghost btn-sm">Cart · 2</a>
+      <a href="login.php" class="btn btn-outline btn-sm">Log in</a>
+      <a href="signup.php" class="btn btn-accent btn-sm">Sign up</a>
     </div>
   </div>
 </header>
 
 <main>
 <section class="container dash-wrap">
+
   <aside class="side">
     <div class="av"></div>
-    <h3>Maison Clay</h3>
+
+    <h3><?= $artisan['shop_name']; ?></h3>
+
     <div class="role">Artisan · Verified</div>
 
     <nav>
-      <a href="dashboard.html" class="active">Overview</a>
-      <a href="dashboard-products.html">Products</a>
-      <a href="dashboard-orders.html">Orders</a>
-      <a href="dashboard-profile.html">Profile</a>
+      <a href="dashboard.php" class="active">Overview</a>
+      <a href="dashboard-products.php">Products</a>
+      <a href="dashboard-orders.php">Orders</a>
+      <a href="dashboard-profile.php">Profile</a>
     </nav>
   </aside>
 
   <div>
     <div class="dash-head">
       <div>
-        <h1>Welcome back, Maison Clay</h1>
+        <h1>Welcome back, <?= $artisan['shop_name']; ?></h1>
         <p class="muted">Here's how your shop is doing this month.</p>
       </div>
-      <a href="dashboard-product-form.html" class="btn btn-accent">+ New product</a>
+
+      <a href="dashboard-product-form.php" class="btn btn-accent">
+        + New product
+      </a>
     </div>
 
     <div class="kpis">
+
       <div class="kpi">
         <div class="l">Revenue</div>
         <div class="v">€2,840</div>
@@ -136,59 +162,83 @@
         <div class="v">18</div>
         <div class="d">2 low stock</div>
       </div>
+
     </div>
 
     <div class="dash-grid">
+
       <div class="panel">
         <h3>Recent orders</h3>
+
         <div class="recent">
-          <div class="row"><div><strong>#ART-2842</strong> · Speckled stoneware bowl</div><div><span class="badge badge-success">Shipped</span></div></div>
-          <div class="row"><div><strong>#ART-2839</strong> · Porcelain mug × 2</div><div><span class="badge badge-warn">Processing</span></div></div>
-          <div class="row"><div><strong>#ART-2831</strong> · Speckled bowl × 3</div><div><span class="badge">Paid</span></div></div>
-          <div class="row"><div><strong>#ART-2810</strong> · Carved cedar bowl</div><div><span class="badge badge-sage">Delivered</span></div></div>
+
+          <div class="row">
+            <div>
+              <strong>#ART-2842</strong>
+              · Speckled stoneware bowl
+            </div>
+
+            <div>
+              <span class="badge badge-success">Shipped</span>
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <strong>#ART-2839</strong>
+              · Porcelain mug × 2
+            </div>
+
+            <div>
+              <span class="badge badge-warn">Processing</span>
+            </div>
+          </div>
+
         </div>
       </div>
 
       <div class="panel">
         <h3>Quick actions</h3>
+
         <div class="quick-actions">
-          <a href="dashboard-product-form.html" class="btn btn-outline btn-block">Add a new product</a>
-          <a href="dashboard-orders.html" class="btn btn-outline btn-block">Manage orders</a>
-          <a href="dashboard-profile.html" class="btn btn-outline btn-block">Edit profile</a>
+          <a href="dashboard-product-form.php" class="btn btn-outline btn-block">
+            Add a new product
+          </a>
+
+          <a href="dashboard-orders.php" class="btn btn-outline btn-block">
+            Manage orders
+          </a>
+
+          <a href="dashboard-profile.php" class="btn btn-outline btn-block">
+            Edit profile
+          </a>
         </div>
       </div>
+
     </div>
   </div>
+
 </section>
 </main>
 
 <footer class="site-footer">
   <div class="container">
+
     <div>
-      <a class="brand" href="index.html">Arti<span>san</span></a>
-      <p class="footer-tag">A cooperative marketplace for handmade pottery, textiles, jewelry, and woodwork from independent makers.</p>
+      <a class="brand" href="index.php">Arti<span>san</span></a>
+
+      <p class="footer-tag">
+        A cooperative marketplace for handmade pottery,
+        textiles, jewelry, and woodwork from independent makers.
+      </p>
     </div>
-    <div>
-      <h4>Shop</h4>
-      <a href="shop.html">All products</a>
-      <a href="shop.html?cat=ceramics">Ceramics</a>
-      <a href="shop.html?cat=textiles">Textiles</a>
-      <a href="shop.html?cat=jewelry">Jewelry</a>
-    </div>
-    <div>
-      <h4>Makers</h4>
-      <a href="artists.html">All artisans</a>
-      <a href="signup.html?role=artisan">Become a maker</a>
-      <a href="dashboard.html">Maker dashboard</a>
-    </div>
-    <div>
-      <h4>Company</h4>
-      <a href="about.html">About</a>
-      <a href="contact.html">Contact</a>
-      <a href="#">Help center</a>
-    </div>
+
   </div>
-  <div class="footer-bottom">© 2026 Artisan — Made with care for the makers.</div>
+
+  <div class="footer-bottom">
+    © 2026 Artisan — Made with care for the makers.
+  </div>
 </footer>
+
 </body>
 </html>
