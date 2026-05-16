@@ -24,7 +24,7 @@ function goToOrderDetail($order_id) {
 }
 
 $user_stmt = $db->prepare("
-    SELECT full_name, email, city_country
+    SELECT city_country
     FROM users
     WHERE user_id = ?
     LIMIT 1
@@ -32,11 +32,6 @@ $user_stmt = $db->prepare("
 $user_stmt->execute([$user_id]);
 $user = $user_stmt->fetch(PDO::FETCH_ASSOC);
 
-$full_name = $user['full_name'] ?? '';
-$name_parts = preg_split('/\s+/', trim($full_name), 2);
-$first_name = $name_parts[0] ?? '';
-$last_name = $name_parts[1] ?? '';
-$email = $user['email'] ?? '';
 $city_country = $user['city_country'] ?? '';
 
 $cart_stmt = $db->prepare("
@@ -90,9 +85,6 @@ $shipping = 0;
 $total = $subtotal + $shipping;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email = trim($_POST['email'] ?? '');
-    $first_name = trim($_POST['first_name'] ?? '');
-    $last_name = trim($_POST['last_name'] ?? '');
     $address = trim($_POST['address'] ?? '');
     $city = trim($_POST['city'] ?? '');
     $postal_code = trim($_POST['postal_code'] ?? '');
@@ -101,11 +93,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (count($cart_items) === 0) {
         $error = 'Your cart is empty.';
-    } elseif ($email === '' || $first_name === '' || $last_name === '' || $address === '' || $city === '' || $country === '') {
+    } elseif ($address === '' || $city === '' || $country === '') {
         $error = 'Please fill in all checkout fields.';
     } else {
-        $shipping_address = $first_name . ' ' . $last_name . "\n" .
-            $address . "\n" .
+        $shipping_address = $address . "\n" .
             $city . ($postal_code !== '' ? ', ' . $postal_code : '') . "\n" .
             $country;
 
@@ -207,27 +198,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <div class="checkout-grid">
     <form method="post">
       <div class="section-block">
-        <h3>1. Contact</h3>
-        <div class="field">
-          <label>Email</label>
-          <input class="input" type="email" name="email" value="<?= e($email); ?>" required>
-        </div>
-      </div>
-
-      <div class="section-block">
-        <h3>2. Shipping address</h3>
-
-        <div class="row-2">
-          <div class="field">
-            <label>First name</label>
-            <input class="input" name="first_name" value="<?= e($first_name); ?>" required>
-          </div>
-
-          <div class="field">
-            <label>Last name</label>
-            <input class="input" name="last_name" value="<?= e($last_name); ?>" required>
-          </div>
-        </div>
+        <h3>1. Shipping address</h3>
 
         <div class="field">
           <label>Address</label>
@@ -259,7 +230,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </div>
 
       <div class="section-block">
-        <h3>3. Payment</h3>
+        <h3>2. Payment</h3>
 
         <div class="pay-method">
           <label><input type="radio" name="payment_method" value="card" checked> Card</label>
