@@ -1,8 +1,17 @@
 <?php
 session_start();
+
+$_SESSION['user_id'] = 2;
+$_SESSION['role'] = 'customer';
+
+if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'customer') {
+    header("Location: login.php");
+    exit;
+}
+
 include 'connection.php';
 
-$user_id = 1; // Temporary until login sessions are ready
+$user_id = (int)$_SESSION['user_id'];
 
 function e($value) {
     return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
@@ -33,10 +42,14 @@ function badgeClass($status) {
 }
 
 $orders_stmt = $db->prepare("
-    SELECT order_id, status, total, placed_at
+    SELECT
+        orders.order_id,
+        orders.status,
+        orders.total,
+        orders.placed_at
     FROM orders
-    WHERE customer_id = ?
-    ORDER BY placed_at DESC
+    WHERE orders.customer_id = ?
+    ORDER BY orders.placed_at DESC
 ");
 $orders_stmt->execute([$user_id]);
 $orders = $orders_stmt->fetchAll(PDO::FETCH_ASSOC);

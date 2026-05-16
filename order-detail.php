@@ -1,8 +1,15 @@
 <?php
 session_start();
+
+$_SESSION['user_id'] = 2;
+$_SESSION['role'] = 'customer';
+if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'customer') {
+    header("Location: login.php");
+    exit;
+}
 include 'connection.php';
 
-$user_id = 1; // Temporary until login sessions are ready
+$user_id = (int)$_SESSION['user_id'];
 $order_id = (int)($_GET['id'] ?? 0);
 
 function e($value) {
