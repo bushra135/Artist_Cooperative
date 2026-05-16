@@ -103,19 +103,17 @@ if ($order_id > 0) {
                     oi.order_item_id,
                     oi.quantity,
                     oi.unit_price,
-                    (
-                        SELECT p.title
-                        FROM products p
-                        WHERE p.product_id = oi.product_id
-                        LIMIT 1
-                    ) AS title,
-                    (
-                        SELECT ap.shop_name
-                        FROM artisan_profiles ap
-                        WHERE ap.user_id = oi.artisan_id
-                        LIMIT 1
-                    ) AS shop_name
+                    products.title,
+                    users.full_name AS artisan_full_name,
+                    artisan_profiles.shop_name
                 FROM order_items oi
+                LEFT JOIN products ON products.product_id = oi.product_id
+                LEFT JOIN (
+                    SELECT user_id, MAX(shop_name) AS shop_name
+                    FROM artisan_profiles
+                    GROUP BY user_id
+                ) AS artisan_profiles ON artisan_profiles.user_id = oi.artisan_id
+                LEFT JOIN users ON users.user_id = artisan_profiles.user_id
                 WHERE oi.order_id = ?
                 ORDER BY oi.order_item_id ASC
             ");
@@ -132,8 +130,7 @@ foreach ($items as $item) {
 
 $subtotal = $order ? (float)$order['subtotal'] : 0;
 $shipping_fee = $order ? (float)$order['shipping_fee'] : 0;
-$total = $order ? (float)$order['total'] : 0;
-$vat = max($total - $subtotal - $shipping_fee, 0);
+$total = $subtotal + $shipping_fee;
 ?>
 
 <!doctype html>
@@ -177,6 +174,10 @@ $vat = max($total - $subtotal - $shipping_fee, 0);
       <a href="orders.php" class="btn btn-outline btn-sm">Back to orders</a>
     </div>
   <?php else: ?>
+    <?php if (isset($_GET['placed']) && $_GET['placed'] === '1'): ?>
+      <div class="badge badge-success" style="margin-bottom:16px">Order placed successfully.</div>
+    <?php endif; ?>
+
     <nav class="crumbs">
       <a href="<?= e($back_url); ?>"><?= e($back_label); ?></a>
       / Order #ART-<?= e(str_pad($order['order_id'], 4, '0', STR_PAD_LEFT)); ?>
@@ -226,7 +227,7 @@ $vat = max($total - $subtotal - $shipping_fee, 0);
                 <div style="flex:1">
                   <div style="font-weight:600"><?= e($item['title'] ?? 'Product'); ?></div>
                   <div class="muted" style="font-size:13px">
-                    <?= e($item['shop_name'] ?? 'Artisan'); ?> × <?= e($item['quantity']); ?>
+                    <?= e($item['artisan_full_name'] ?? 'Artisan'); ?> · <?= e($item['shop_name'] ?? 'Shop'); ?> × <?= e($item['quantity']); ?>
                   </div>
                 </div>
 
@@ -253,11 +254,6 @@ $vat = max($total - $subtotal - $shipping_fee, 0);
           <div class="line">
             <span>Shipping</span>
             <span><?= $shipping_fee > 0 ? '€' . e(number_format($shipping_fee, 2)) : 'Free'; ?></span>
-          </div>
-
-          <div class="line">
-            <span>VAT</span>
-            <span>€<?= e(number_format($vat, 2)); ?></span>
           </div>
 
           <div class="line total">
