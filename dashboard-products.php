@@ -2,31 +2,49 @@
 session_start();
 include 'connection.php';
 
-$user_id = 1;
+$user_id = 1; // Temporary until login sessions are ready
 
 function e($value) {
-  return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
-}
-
-function productStatusLabel($product) {
-  if ($product['status'] === 'draft') return 'Draft';
-  if ((int)$product['stock'] <= 0) return 'Out of stock';
-  if ((int)$product['stock'] <= 3) return 'Low stock';
-  return 'Live';
+    return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
 }
 
 function productBadgeClass($product) {
-  if ($product['status'] === 'draft') return '';
-  if ((int)$product['stock'] <= 0) return 'badge-danger';
-  if ((int)$product['stock'] <= 3) return 'badge-warn';
-  return 'badge-success';
+    if ($product['status'] === 'draft') {
+        return '';
+    }
+
+    if ($product['stock_status'] === 'out_of_stock') {
+        return 'badge-danger';
+    }
+
+    if ($product['stock_status'] === 'low_stock' && (int)$product['stock'] <= 3) {
+        return 'badge-warn';
+    }
+
+    return 'badge-success';
+}
+
+function productStatusLabel($product) {
+    if ($product['status'] === 'draft') {
+        return 'Draft';
+    }
+
+    if ($product['stock_status'] === 'out_of_stock') {
+        return 'Out of stock';
+    }
+
+    if ($product['stock_status'] === 'low_stock' && (int)$product['stock'] <= 3) {
+        return 'Low stock';
+    }
+
+    return 'Live';
 }
 
 $artisan_stmt = $db->prepare("
-  SELECT user_id, shop_name, verification_status
-  FROM artisan_profiles
-  WHERE user_id = ?
-  LIMIT 1
+    SELECT user_id, shop_name, verification_status
+    FROM artisan_profiles
+    WHERE user_id = ?
+    LIMIT 1
 ");
 $artisan_stmt->execute([$user_id]);
 $artisan = $artisan_stmt->fetch(PDO::FETCH_ASSOC);
@@ -36,24 +54,38 @@ $verification_status = $artisan ? ucfirst($artisan['verification_status']) : 'Ve
 $artisan_id = $artisan ? (int)$artisan['user_id'] : $user_id;
 
 $products_stmt = $db->prepare("
-  SELECT products.product_id, products.title, products.price, products.stock,
-         products.stock_status, products.status, categories.name AS category_name
-  FROM products
-  LEFT JOIN categories ON categories.category_id = products.category_id
-  WHERE products.artisan_id = ?
-  ORDER BY products.created_at DESC
+    SELECT
+        products.product_id,
+        products.title,
+        products.price,
+        products.stock,
+        products.stock_status,
+        products.status,
+        categories.name AS category_name,
+        (
+            SELECT product_images.image_url
+            FROM product_images
+            WHERE product_images.product_id = products.product_id
+            ORDER BY product_images.sort_order ASC, product_images.image_id DESC
+            LIMIT 1
+        ) AS image_url
+    FROM products
+    LEFT JOIN categories ON categories.category_id = products.category_id
+    WHERE products.artisan_id = ?
+    ORDER BY products.created_at DESC
 ");
 $products_stmt->execute([$artisan_id]);
 $products = $products_stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $total_products = count($products);
-$low_stock_count = 0;
-
-foreach ($products as $product) {
-  if ((int)$product['stock'] > 0 && (int)$product['stock'] <= 3) {
-    $low_stock_count++;
-  }
-}
+$low_stock_stmt = $db->prepare("
+    SELECT COUNT(*)
+    FROM products
+    WHERE artisan_id = ?
+    AND stock <= 5
+");
+$low_stock_stmt->execute([$artisan_id]);
+$low_stock_count = (int)$low_stock_stmt->fetchColumn();
 ?>
 
 <!doctype html>
@@ -65,8 +97,36 @@ foreach ($products as $product) {
 <meta name="description" content="Manage your product listings.">
 <link rel="stylesheet" href="css/global.css">
 <link rel="stylesheet" href="css/dash-products.css">
-</head>
 
+<style>
+  .table td{
+    vertical-align:middle;
+  }
+
+  .thumb{
+    width:64px;
+    height:64px;
+    border-radius:12px;
+    overflow:hidden;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+  }
+
+  .thumb.placeholder{
+    background:#8AA38B;
+  }
+
+  .thumb img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+    border-radius:12px;
+  }
+</style>
+</head>
 <body>
 <header class="site-header">
   <div class="nav-inner">
@@ -85,14 +145,13 @@ foreach ($products as $product) {
     </div>
   </div>
 </header>
-
 <main>
+
 <section class="container dash-wrap">
   <aside class="side">
     <div class="av"></div>
     <h3><?= e($shop_name); ?></h3>
     <div class="role">Artisan · <?= e($verification_status); ?></div>
-
     <nav>
       <a href="dashboard.php">Overview</a>
       <a href="dashboard-products.php" class="active">Products</a>
@@ -100,7 +159,6 @@ foreach ($products as $product) {
       <a href="dashboard-profile.php">Profile</a>
     </nav>
   </aside>
-
   <div>
     <div class="head">
       <div>
@@ -121,39 +179,53 @@ foreach ($products as $product) {
           <th></th>
         </tr>
       </thead>
-
       <tbody>
         <?php if (count($products) > 0): ?>
-          <?php foreach ($products as $product): ?>
+          <?php foreach ($products as $index => $product): ?>
+            <?php
+              $colors = ['#8AA38B', '#C2562E', '#D89A2A', '#6B8E4E', '#B23A2A'];
+              $thumb_color = $colors[$index % count($colors)];
+              $image_file = '';
+              $has_image = false;
+
+              if (!empty($product['image_url'])) {
+                  $image_file = __DIR__ . DIRECTORY_SEPARATOR . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $product['image_url']);
+                  $has_image = file_exists($image_file);
+              }
+            ?>
             <tr>
-              <td><div class="thumb" style="background:#8AA38B"></div></td>
+              <td>
+                <div class="thumb <?= $has_image ? '' : 'placeholder'; ?>" style="background:<?= e($thumb_color); ?>">
+                  <?php if ($has_image): ?>
+                    <img src="<?= e($product['image_url']); ?>" alt="<?= e($product['title']); ?>">
+                  <?php endif; ?>
+                </div>
+              </td>
               <td>
                 <strong><?= e($product['title']); ?></strong><br>
                 <span class="muted" style="font-size:12px"><?= e($product['category_name'] ?? 'Uncategorized'); ?></span>
               </td>
-              <td>€<?= e(number_format((float)$product['price'], 2)); ?></td>
+              <td>€<?= e(number_format((float)$product['price'], 0)); ?></td>
               <td><?= e($product['stock']); ?></td>
               <td>
                 <span class="badge <?= e(productBadgeClass($product)); ?>">
                   <?= e(productStatusLabel($product)); ?>
                 </span>
               </td>
-              <td>
-                <a href="dashboard-product-form.php?id=<?= e($product['product_id']); ?>" class="btn btn-ghost btn-sm">Edit</a>
-              </td>
+              <td><a href="dashboard-product-form.php?id=<?= e($product['product_id']); ?>" class="btn btn-ghost btn-sm">Edit</a></td>
             </tr>
           <?php endforeach; ?>
         <?php else: ?>
           <tr>
-            <td colspan="6" class="muted">No products yet.</td>
+            <td colspan="6" class="muted">No products yet. Add your first product to see it here.</td>
           </tr>
         <?php endif; ?>
       </tbody>
     </table>
   </div>
 </section>
-</main>
 
+</main>
 <footer class="site-footer">
   <div class="container">
     <div>

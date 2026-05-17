@@ -10,6 +10,39 @@ function e($value) {
     return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
 }
 
+function uploadAvatar($user_id) {
+    if (!isset($_FILES['avatar']) || $_FILES['avatar']['error'] === UPLOAD_ERR_NO_FILE) {
+        return null;
+    }
+
+    if ($_FILES['avatar']['error'] !== UPLOAD_ERR_OK) {
+        throw new Exception('Avatar upload failed. Please try again.');
+    }
+
+    $allowed_extensions = ['jpg', 'jpeg', 'png', 'webp'];
+    $original_name = $_FILES['avatar']['name'];
+    $extension = strtolower(pathinfo($original_name, PATHINFO_EXTENSION));
+
+    if (!in_array($extension, $allowed_extensions, true)) {
+        throw new Exception('Please upload a JPG, JPEG, PNG, or WEBP avatar.');
+    }
+
+    $upload_dir = __DIR__ . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'avatars';
+
+    if (!is_dir($upload_dir)) {
+        mkdir($upload_dir, 0777, true);
+    }
+
+    $file_name = 'avatar_' . $user_id . '_' . uniqid('', true) . '.' . $extension;
+    $target_path = $upload_dir . DIRECTORY_SEPARATOR . $file_name;
+
+    if (!move_uploaded_file($_FILES['avatar']['tmp_name'], $target_path)) {
+        throw new Exception('Could not save uploaded avatar.');
+    }
+
+    return 'uploads/avatars/' . $file_name;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $full_name = trim($_POST['full_name'] ?? '');
     $shop_name = trim($_POST['shop_name'] ?? '');
@@ -19,6 +52,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $website = trim($_POST['website'] ?? '');
 
     try {
+        $avatar_path = uploadAvatar($user_id);
+
         $update_user = $db->prepare("
             UPDATE users
             SET full_name = ?, email = ?
@@ -26,25 +61,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ");
         $update_user->execute([$full_name, $email, $user_id]);
 
-        $update_profile = $db->prepare("
-            UPDATE artisan_profiles
-            SET shop_name = ?, bio = ?, location = ?, website = ?
+        $profile_exists_stmt = $db->prepare("
+            SELECT COUNT(*)
+            FROM artisan_profiles
             WHERE user_id = ?
         ");
-        $update_profile->execute([$shop_name, $bio, $location, $website, $user_id]);
+        $profile_exists_stmt->execute([$user_id]);
+        $profile_exists = (int)$profile_exists_stmt->fetchColumn() > 0;
 
-        if ($update_profile->rowCount() === 0) {
+        if ($profile_exists) {
+            if ($avatar_path !== null) {
+                $update_profile = $db->prepare("
+                    UPDATE artisan_profiles
+                    SET shop_name = ?, bio = ?, location = ?, website = ?, avatar = ?
+                    WHERE user_id = ?
+                ");
+                $update_profile->execute([$shop_name, $bio, $location, $website, $avatar_path, $user_id]);
+            } else {
+                $update_profile = $db->prepare("
+                    UPDATE artisan_profiles
+                    SET shop_name = ?, bio = ?, location = ?, website = ?
+                    WHERE user_id = ?
+                ");
+                $update_profile->execute([$shop_name, $bio, $location, $website, $user_id]);
+            }
+        } else {
             $insert_profile = $db->prepare("
                 INSERT INTO artisan_profiles
                 (user_id, shop_name, craft_specialty, bio, location, website, avatar, cover_photo, member_since, verification_status)
-                VALUES (?, ?, 'Pottery', ?, ?, ?, '', '', CURDATE(), 'pending')
+                VALUES (?, ?, 'Pottery', ?, ?, ?, ?, '', CURDATE(), 'pending')
             ");
-            $insert_profile->execute([$user_id, $shop_name, $bio, $location, $website]);
+            $insert_profile->execute([$user_id, $shop_name, $bio, $location, $website, $avatar_path ?? '']);
         }
 
         $message = 'Profile saved successfully.';
     } catch (PDOException $ex) {
         $error = 'Could not save profile. Please check the data and try again.';
+    } catch (Exception $ex) {
+        $error = $ex->getMessage();
     }
 }
 
@@ -56,6 +110,7 @@ $stmt = $db->prepare("
         artisan_profiles.bio,
         artisan_profiles.location,
         artisan_profiles.website,
+        artisan_profiles.avatar,
         artisan_profiles.member_since,
         artisan_profiles.verification_status
     FROM users
@@ -73,8 +128,17 @@ $shop_name = $profile['shop_name'] ?? 'Maison Clay';
 $bio = $profile['bio'] ?? 'Slow-fired stoneware from Provence. Each piece is shaped by hand in a small ceramics studio.';
 $location = $profile['location'] ?? 'Provence, France';
 $website = $profile['website'] ?? 'maisonclay.fr';
+$avatar = $profile['avatar'] ?? '';
 $member_since = !empty($profile['member_since']) ? date('Y', strtotime($profile['member_since'])) : '2024';
 $verification_status = !empty($profile['verification_status']) ? ucfirst($profile['verification_status']) : 'Verified';
+
+$avatar_file = '';
+$has_avatar = false;
+
+if (!empty($avatar)) {
+    $avatar_file = __DIR__ . DIRECTORY_SEPARATOR . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $avatar);
+    $has_avatar = file_exists($avatar_file);
+}
 ?>
 
 <!doctype html>
@@ -87,6 +151,29 @@ $verification_status = !empty($profile['verification_status']) ? ucfirst($profil
 <link rel="stylesheet" href="css/global.css">
 <link rel="stylesheet" href="css/dash-form.css">
 
+<style>
+  .side .av{
+    overflow:hidden;
+  }
+
+  .side .av img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+  }
+
+  .btn-logout{
+    border-color:#b94a3a;
+    color:#9f382a;
+    background:#fff;
+  }
+
+  .btn-logout:hover{
+    background:#fff4f1;
+    border-color:#9f382a;
+  }
+</style>
 </head>
 <body>
 <header class="site-header">
@@ -110,7 +197,11 @@ $verification_status = !empty($profile['verification_status']) ? ucfirst($profil
 
 <section class="container dash-wrap">
   <aside class="side">
-    <div class="av"></div>
+    <div class="av">
+      <?php if ($has_avatar): ?>
+        <img src="<?= e($avatar); ?>" alt="<?= e($shop_name); ?>">
+      <?php endif; ?>
+    </div>
     <h3><?= e($shop_name); ?></h3>
     <div class="role">Artisan · <?= e($verification_status); ?></div>
     <nav>
@@ -133,7 +224,7 @@ $verification_status = !empty($profile['verification_status']) ? ucfirst($profil
       <div class="badge badge-danger" style="margin-bottom:16px"><?= e($error); ?></div>
     <?php endif; ?>
 
-    <form method="post" class="form-grid">
+    <form method="post" class="form-grid" enctype="multipart/form-data">
       <div>
         <div class="block">
           <h3>Studio profile</h3>
@@ -186,7 +277,7 @@ $verification_status = !empty($profile['verification_status']) ? ucfirst($profil
 
           <div class="field">
             <label>Avatar <span class="muted">(optional)</span></label>
-            <input class="input" type="file">
+            <input class="input" type="file" name="avatar" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
           </div>
 
           <div class="field">
@@ -209,7 +300,7 @@ $verification_status = !empty($profile['verification_status']) ? ucfirst($profil
           </div>
         </div>
 
-        <a href="login.php" class="btn btn-outline btn-block">Log out</a>
+        <a href="login.php" class="btn btn-outline btn-block btn-logout">Log out</a>
       </aside>
     </form>
   </div>
