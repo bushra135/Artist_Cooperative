@@ -1,15 +1,8 @@
 <?php
 session_start();
-
-$_SESSION['user_id'] = 2;
-$_SESSION['role'] = 'customer';
-if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'customer') {
-    header("Location: login.php");
-    exit;
-}
 include 'connection.php';
 
-$user_id = (int)$_SESSION['user_id'];
+$user_id = 1; // Temporary until login sessions are ready
 $order_id = (int)($_GET['id'] ?? 0);
 
 function e($value) {
@@ -93,7 +86,6 @@ if ($order_id > 0) {
             AND artisan_id = ?
         ");
         $artisan_check->execute([$order_id, $user_id]);
-
         $is_artisan_order = (int)$artisan_check->fetchColumn() > 0;
         $is_customer_order = (int)$order['customer_id'] === $user_id;
 
@@ -112,7 +104,14 @@ if ($order_id > 0) {
                     oi.unit_price,
                     products.title,
                     users.full_name AS artisan_full_name,
-                    artisan_profiles.shop_name
+                    artisan_profiles.shop_name,
+                    (
+                        SELECT product_images.image_url
+                        FROM product_images
+                        WHERE product_images.product_id = oi.product_id
+                        ORDER BY product_images.sort_order ASC, product_images.image_id DESC
+                        LIMIT 1
+                    ) AS image_url
                 FROM order_items oi
                 LEFT JOIN products ON products.product_id = oi.product_id
                 LEFT JOIN (
@@ -149,6 +148,28 @@ $total = $subtotal + $shipping_fee;
 <meta name="description" content="Order detail.">
 <link rel="stylesheet" href="css/global.css">
 <link rel="stylesheet" href="css/order-detail.css">
+
+<style>
+  .item .sw{
+    width:76px;
+    height:76px;
+    min-width:76px;
+    border-radius:12px;
+    overflow:hidden;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:#8AA38B;
+  }
+
+  .item .sw img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+    border-radius:12px;
+  }
+</style>
 </head>
 
 <body>
@@ -174,7 +195,6 @@ $total = $subtotal + $shipping_fee;
 <section class="container detail-wrap">
   <?php if (!$order || !$can_view): ?>
     <nav class="crumbs"><a href="orders.php">My orders</a> / Order not found</nav>
-
     <div class="block">
       <h1>Order not found</h1>
       <p class="muted">This order does not exist or is not linked to your account.</p>
@@ -185,10 +205,7 @@ $total = $subtotal + $shipping_fee;
       <div class="badge badge-success" style="margin-bottom:16px">Order placed successfully.</div>
     <?php endif; ?>
 
-    <nav class="crumbs">
-      <a href="<?= e($back_url); ?>"><?= e($back_label); ?></a>
-      / Order #ART-<?= e(str_pad($order['order_id'], 4, '0', STR_PAD_LEFT)); ?>
-    </nav>
+    <nav class="crumbs"><a href="<?= e($back_url); ?>"><?= e($back_label); ?></a> / Order #ART-<?= e(str_pad($order['order_id'], 4, '0', STR_PAD_LEFT)); ?></nav>
 
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
       <div>
@@ -198,17 +215,13 @@ $total = $subtotal + $shipping_fee;
           <?= e($item_count); ?> <?= $item_count === 1 ? 'item' : 'items'; ?>
         </p>
       </div>
-
-      <span class="badge <?= e(badgeClass($order['status'])); ?>">
-        <?= e(statusLabel($order['status'])); ?>
-      </span>
+      <span class="badge <?= e(badgeClass($order['status'])); ?>"><?= e(statusLabel($order['status'])); ?></span>
     </div>
 
     <div class="detail-grid">
       <div>
         <div class="block">
           <h3>Status</h3>
-
           <div class="timeline">
             <div class="tl-step done"><div class="tl-dot"></div><span>Placed</span></div>
             <div class="tl-step <?= stepDone($order['status'], 'paid') ? 'done' : ''; ?>"><div class="tl-dot"></div><span>Paid</span></div>
@@ -228,19 +241,28 @@ $total = $subtotal + $shipping_fee;
 
           <?php if (count($items) > 0): ?>
             <?php foreach ($items as $index => $item): ?>
-              <div class="item">
-                <div class="sw <?= $index === 1 ? 't2' : ($index === 2 ? 't3' : ''); ?>"></div>
+              <?php
+                $image_url = $item['image_url'] ?? '';
+                $has_image = false;
 
+                if (!empty($image_url)) {
+                    $image_file = __DIR__ . DIRECTORY_SEPARATOR . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $image_url);
+                    $has_image = file_exists($image_file);
+                }
+              ?>
+              <div class="item">
+                <div class="sw <?= !$has_image ? ($index === 1 ? 't2' : ($index === 2 ? 't3' : '')) : ''; ?>">
+                  <?php if ($has_image): ?>
+                    <img src="<?= e($image_url); ?>" alt="<?= e($item['title'] ?? 'Product'); ?>">
+                  <?php endif; ?>
+                </div>
                 <div style="flex:1">
                   <div style="font-weight:600"><?= e($item['title'] ?? 'Product'); ?></div>
                   <div class="muted" style="font-size:13px">
                     <?= e($item['artisan_full_name'] ?? 'Artisan'); ?> · <?= e($item['shop_name'] ?? 'Shop'); ?> × <?= e($item['quantity']); ?>
                   </div>
                 </div>
-
-                <div style="font-weight:600;color:var(--accent)">
-                  €<?= e(number_format((float)$item['unit_price'], 2)); ?>
-                </div>
+                <div style="font-weight:600;color:var(--accent)">€<?= e(number_format((float)$item['unit_price'], 2)); ?></div>
               </div>
             <?php endforeach; ?>
           <?php else: ?>
@@ -252,21 +274,12 @@ $total = $subtotal + $shipping_fee;
       <aside>
         <div class="block">
           <h3>Summary</h3>
-
-          <div class="line">
-            <span>Subtotal</span>
-            <span>€<?= e(number_format($subtotal, 2)); ?></span>
-          </div>
-
+          <div class="line"><span>Subtotal</span><span>€<?= e(number_format($subtotal, 2)); ?></span></div>
           <div class="line">
             <span>Shipping</span>
             <span><?= $shipping_fee > 0 ? '€' . e(number_format($shipping_fee, 2)) : 'Free'; ?></span>
           </div>
-
-          <div class="line total">
-            <span>Total</span>
-            <span>€<?= e(number_format($total, 2)); ?></span>
-          </div>
+          <div class="line total"><span>Total</span><span>€<?= e(number_format($total, 2)); ?></span></div>
         </div>
 
         <div class="block">
@@ -295,7 +308,6 @@ $total = $subtotal + $shipping_fee;
       <a class="brand" href="index.php">Arti<span>san</span></a>
       <p class="footer-tag">A cooperative marketplace for handmade pottery, textiles, jewelry, and woodwork from independent makers.</p>
     </div>
-
     <div>
       <h4>Shop</h4>
       <a href="shop.php">All products</a>
@@ -303,14 +315,12 @@ $total = $subtotal + $shipping_fee;
       <a href="shop.php?cat=textiles">Textiles</a>
       <a href="shop.php?cat=jewelry">Jewelry</a>
     </div>
-
     <div>
       <h4>Makers</h4>
       <a href="artists.php">All artisans</a>
       <a href="signup.php?role=artisan">Become a maker</a>
       <a href="dashboard.php">Maker dashboard</a>
     </div>
-
     <div>
       <h4>Company</h4>
       <a href="about.php">About</a>
@@ -318,10 +328,7 @@ $total = $subtotal + $shipping_fee;
       <a href="#">Help center</a>
     </div>
   </div>
-
   <div class="footer-bottom">© 2026 Artisan — Made with care for the makers.</div>
 </footer>
 </body>
 </html>
-
-

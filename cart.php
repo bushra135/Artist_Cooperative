@@ -95,7 +95,14 @@ if ($cart_id > 0) {
             products.title,
             products.material,
             products.price,
-            artisan_shop.shop_name
+            artisan_shop.shop_name,
+            (
+                SELECT product_images.image_url
+                FROM product_images
+                WHERE product_images.product_id = products.product_id
+                ORDER BY product_images.sort_order ASC, product_images.image_id DESC
+                LIMIT 1
+            ) AS image_url
         FROM cart_items
         JOIN products ON products.product_id = cart_items.product_id
         LEFT JOIN (
@@ -148,6 +155,21 @@ $total = $subtotal + $shipping;
     cursor:pointer;
     font:inherit;
   }
+
+  .cart-row .thumb{
+    overflow:hidden;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  .cart-row .thumb img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+    border-radius:8px;
+  }
 </style>
 </head>
 
@@ -178,8 +200,21 @@ $total = $subtotal + $shipping;
     <div class="cart-list">
       <?php if (count($cart_items) > 0): ?>
         <?php foreach ($cart_items as $index => $item): ?>
+          <?php
+            $image_url = $item['image_url'] ?? '';
+            $has_image = false;
+
+            if (!empty($image_url)) {
+                $image_file = __DIR__ . DIRECTORY_SEPARATOR . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $image_url);
+                $has_image = file_exists($image_file);
+            }
+          ?>
           <div class="cart-row">
-            <div class="thumb <?= $index === 1 ? 't2' : ''; ?>"></div>
+            <div class="thumb <?= !$has_image && $index === 1 ? 't2' : ''; ?>">
+              <?php if ($has_image): ?>
+                <img src="<?= e($image_url); ?>" alt="<?= e($item['title']); ?>">
+              <?php endif; ?>
+            </div>
 
             <div>
               <h4><?= e($item['title']); ?></h4>

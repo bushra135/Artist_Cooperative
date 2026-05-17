@@ -56,7 +56,14 @@ if ($cart_id > 0) {
             products.title,
             products.price,
             users.full_name AS artisan_full_name,
-            artisan_profiles.shop_name
+            artisan_profiles.shop_name,
+            (
+                SELECT product_images.image_url
+                FROM product_images
+                WHERE product_images.product_id = products.product_id
+                ORDER BY product_images.sort_order ASC, product_images.image_id DESC
+                LIMIT 1
+            ) AS image_url
         FROM cart_items
         JOIN products ON products.product_id = cart_items.product_id
         LEFT JOIN (
@@ -166,6 +173,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <meta name="description" content="Complete your order.">
 <link rel="stylesheet" href="css/global.css">
 <link rel="stylesheet" href="css/checkout.css">
+
+<style>
+  .summary .item .sw{
+    overflow:hidden;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  .summary .item .sw img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+    border-radius:6px;
+  }
+</style>
 </head>
 
 <body>
@@ -271,8 +295,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
       <?php if (count($cart_items) > 0): ?>
         <?php foreach ($cart_items as $index => $item): ?>
+          <?php
+            $image_url = $item['image_url'] ?? '';
+            $has_image = false;
+
+            if (!empty($image_url)) {
+                $image_file = __DIR__ . DIRECTORY_SEPARATOR . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $image_url);
+                $has_image = file_exists($image_file);
+            }
+          ?>
           <div class="item">
-            <div class="sw <?= $index === 1 ? 't2' : ''; ?>"></div>
+            <div class="sw <?= !$has_image && $index === 1 ? 't2' : ''; ?>">
+              <?php if ($has_image): ?>
+                <img src="<?= e($image_url); ?>" alt="<?= e($item['title']); ?>">
+              <?php endif; ?>
+            </div>
             <div class="name">
               <div><?= e($item['title']); ?></div>
               <div class="m"><?= e($item['artisan_full_name'] ?? 'Artisan'); ?> · <?= e($item['shop_name'] ?? 'Shop'); ?> × <?= e($item['quantity']); ?></div>

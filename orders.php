@@ -55,7 +55,16 @@ $orders_stmt->execute([$user_id]);
 $orders = $orders_stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $items_stmt = $db->prepare("
-    SELECT products.title, order_items.quantity
+    SELECT
+        products.title,
+        order_items.quantity,
+        (
+            SELECT product_images.image_url
+            FROM product_images
+            WHERE product_images.product_id = order_items.product_id
+            ORDER BY product_images.sort_order ASC, product_images.image_id DESC
+            LIMIT 1
+        ) AS image_url
     FROM order_items
     LEFT JOIN products ON products.product_id = order_items.product_id
     WHERE order_items.order_id = ?
@@ -72,6 +81,28 @@ $items_stmt = $db->prepare("
 <meta name="description" content="Track your past and current orders.">
 <link rel="stylesheet" href="css/global.css">
 <link rel="stylesheet" href="css/orders.css">
+
+<style>
+  .order-items .sw{
+    width:60px;
+    height:60px;
+    min-width:60px;
+    border-radius:10px;
+    overflow:hidden;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:#8AA38B;
+  }
+
+  .order-items .sw img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+    border-radius:10px;
+  }
+</style>
 </head>
 
 <body>
@@ -116,8 +147,21 @@ $items_stmt = $db->prepare("
         <div class="order-items">
           <?php if (count($items) > 0): ?>
             <?php foreach ($items as $index => $item): ?>
+              <?php
+                $image_url = $item['image_url'] ?? '';
+                $has_image = false;
+
+                if (!empty($image_url)) {
+                    $image_file = __DIR__ . DIRECTORY_SEPARATOR . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $image_url);
+                    $has_image = file_exists($image_file);
+                }
+              ?>
               <div class="it">
-                <div class="sw <?= $index === 1 ? 't2' : ($index === 2 ? 't3' : ''); ?>"></div>
+                <div class="sw <?= !$has_image ? ($index === 1 ? 't2' : ($index === 2 ? 't3' : '')) : ''; ?>">
+                  <?php if ($has_image): ?>
+                    <img src="<?= e($image_url); ?>" alt="<?= e($item['title'] ?? 'Product'); ?>">
+                  <?php endif; ?>
+                </div>
                 <?= e($item['title'] ?? 'Product'); ?> × <?= e($item['quantity']); ?>
               </div>
             <?php endforeach; ?>

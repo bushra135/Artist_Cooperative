@@ -1,8 +1,17 @@
 <?php
 session_start();
+
+$_SESSION['user_id'] = 1;
+$_SESSION['role'] = 'artisan';
+
+if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'artisan') {
+    header("Location: login.php");
+    exit;
+}
+
 include 'connection.php';
 
-$user_id = 1; // Temporary until login sessions are ready
+$user_id = (int)$_SESSION['user_id'];
 
 function e($value) {
     return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
@@ -41,7 +50,7 @@ function productStatusLabel($product) {
 }
 
 $artisan_stmt = $db->prepare("
-    SELECT user_id, shop_name, verification_status
+    SELECT user_id, shop_name, verification_status, avatar
     FROM artisan_profiles
     WHERE user_id = ?
     LIMIT 1
@@ -52,6 +61,13 @@ $artisan = $artisan_stmt->fetch(PDO::FETCH_ASSOC);
 $shop_name = $artisan ? $artisan['shop_name'] : 'Maison Clay';
 $verification_status = $artisan ? ucfirst($artisan['verification_status']) : 'Verified';
 $artisan_id = $artisan ? (int)$artisan['user_id'] : $user_id;
+$avatar = $artisan['avatar'] ?? '';
+$has_avatar = false;
+
+if (!empty($avatar)) {
+    $avatar_file = __DIR__ . DIRECTORY_SEPARATOR . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $avatar);
+    $has_avatar = file_exists($avatar_file);
+}
 
 $products_stmt = $db->prepare("
     SELECT
@@ -99,6 +115,17 @@ $low_stock_count = (int)$low_stock_stmt->fetchColumn();
 <link rel="stylesheet" href="css/dash-products.css">
 
 <style>
+  .side .av{
+    overflow:hidden;
+  }
+
+  .side .av img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+  }
+
   .table td{
     vertical-align:middle;
   }
@@ -149,7 +176,11 @@ $low_stock_count = (int)$low_stock_stmt->fetchColumn();
 
 <section class="container dash-wrap">
   <aside class="side">
-    <div class="av"></div>
+    <div class="av">
+      <?php if ($has_avatar): ?>
+        <img src="<?= e($avatar); ?>" alt="<?= e($shop_name); ?>">
+      <?php endif; ?>
+    </div>
     <h3><?= e($shop_name); ?></h3>
     <div class="role">Artisan · <?= e($verification_status); ?></div>
     <nav>
