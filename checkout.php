@@ -5,11 +5,12 @@ $_SESSION['user_id'] = 2;
 $_SESSION['role'] = 'customer';
 
 if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'customer') {
-    header("Location: login.php");
+    header("Location: login.html");
     exit;
 }
 
 include 'connection.php';
+include 'image-path.php';
 
 $user_id = (int)$_SESSION['user_id'];
 $error = '';
@@ -58,12 +59,10 @@ if ($cart_id > 0) {
             users.full_name AS artisan_full_name,
             artisan_profiles.shop_name,
             (
-                SELECT product_images.image_url
+                SELECT GROUP_CONCAT(product_images.image_url ORDER BY product_images.sort_order ASC, product_images.image_id DESC SEPARATOR '||')
                 FROM product_images
                 WHERE product_images.product_id = products.product_id
-                ORDER BY product_images.sort_order ASC, product_images.image_id DESC
-                LIMIT 1
-            ) AS image_url
+            ) AS image_urls
         FROM cart_items
         JOIN products ON products.product_id = cart_items.product_id
         LEFT JOIN (
@@ -205,7 +204,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </nav>
     <div class="nav-actions">
       <a href="cart.php" class="btn btn-ghost btn-sm">Cart · <?= e($cart_count); ?></a>
-      <a href="login.php" class="btn btn-outline btn-sm">Log in</a>
+      <a href="login.html" class="btn btn-outline btn-sm">Log in</a>
       <a href="signup.php" class="btn btn-accent btn-sm">Sign up</a>
     </div>
   </div>
@@ -296,24 +295,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <?php if (count($cart_items) > 0): ?>
         <?php foreach ($cart_items as $index => $item): ?>
           <?php
-            $image_url = $item['image_url'] ?? '';
-            $has_image = false;
-
-            if (!empty($image_url)) {
-                $image_file = __DIR__ . DIRECTORY_SEPARATOR . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $image_url);
-                $has_image = file_exists($image_file);
-            }
+            $image_url = storedImageUrl($item['image_urls'] ?? '');
+            $has_image = $image_url !== '';
           ?>
+
           <div class="item">
             <div class="sw <?= !$has_image && $index === 1 ? 't2' : ''; ?>">
               <?php if ($has_image): ?>
                 <img src="<?= e($image_url); ?>" alt="<?= e($item['title']); ?>">
               <?php endif; ?>
             </div>
+
             <div class="name">
               <div><?= e($item['title']); ?></div>
-              <div class="m"><?= e($item['artisan_full_name'] ?? 'Artisan'); ?> · <?= e($item['shop_name'] ?? 'Shop'); ?> × <?= e($item['quantity']); ?></div>
+              <div class="m">
+                <?= e($item['artisan_full_name'] ?? 'Artisan'); ?> ·
+                <?= e($item['shop_name'] ?? 'Shop'); ?> ×
+                <?= e($item['quantity']); ?>
+              </div>
             </div>
+
             <div>€<?= e(number_format((float)$item['price'] * (int)$item['quantity'], 2)); ?></div>
           </div>
         <?php endforeach; ?>
@@ -368,6 +369,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   </div>
   <div class="footer-bottom">© 2026 Artisan — Made with care for the makers.</div>
 </footer>
+
 <script>
   function toggleCardFields() {
     const selectedPayment = document.querySelector('input[name="payment_method"]:checked');

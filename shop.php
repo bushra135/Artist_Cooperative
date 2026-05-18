@@ -1,5 +1,71 @@
 <?php
+session_start();
 include 'connection.php';
+include 'image-path.php';
+
+function e($value) {
+    return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
+}
+
+function productImageUrl($image_urls) {
+    return storedImageUrl($image_urls);
+}
+
+$cart_count = 0;
+$current_user_id = (int)($_SESSION['user_id'] ?? 0);
+
+if ($current_user_id > 0) {
+    $cart_count_stmt = $db->prepare("
+        SELECT COALESCE(SUM(cart_items.quantity), 0)
+        FROM carts
+        LEFT JOIN cart_items ON cart_items.cart_id = carts.cart_id
+        WHERE carts.user_id = ?
+    ");
+    $cart_count_stmt->execute([$current_user_id]);
+    $cart_count = (int)$cart_count_stmt->fetchColumn();
+}
+
+$category_id = (int)($_GET['category_id'] ?? 0);
+
+$categories_stmt = $db->query("
+    SELECT category_id, name
+    FROM categories
+    ORDER BY name
+");
+$categories = $categories_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$params = [];
+
+$sql = "
+    SELECT
+        p.product_id,
+        p.title,
+        p.price,
+        ap.shop_name,
+        (
+            SELECT GROUP_CONCAT(pi.image_url ORDER BY pi.sort_order ASC, pi.image_id DESC SEPARATOR '||')
+            FROM product_images pi
+            WHERE pi.product_id = p.product_id
+        ) AS image_urls
+    FROM products p
+    JOIN (
+        SELECT user_id, MAX(shop_name) AS shop_name
+        FROM artisan_profiles
+        GROUP BY user_id
+    ) ap ON p.artisan_id = ap.user_id
+    WHERE p.status = 'live'
+";
+
+if ($category_id > 0) {
+    $sql .= " AND p.category_id = ?";
+    $params[] = $category_id;
+}
+
+$sql .= " ORDER BY p.created_at DESC";
+
+$stmt = $db->prepare($sql);
+$stmt->execute($params);
+$products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <!doctype html>
@@ -20,20 +86,20 @@ include 'connection.php';
 <header class="site-header">
 <div class="nav-inner">
 
-<a class="brand" href="index.html">Arti<span>san</span></a>
+<a class="brand" href="index.php">Arti<span>san</span></a>
 
 <nav class="nav-links">
-<a href="index.html">About site</a>
-<a href="home.html">Home</a>
+<a href="index.php">About site</a>
+<a href="home.php">Home</a>
 <a href="shop.php" class="active">Shop</a>
 <a href="artists.php">Artisans</a>
-<a href="about.html">About</a>
+<a href="about.php">About</a>
 </nav>
 
 <div class="nav-actions">
-<a href="cart.php" class="btn btn-ghost btn-sm">Cart • 2</a>
-<a href="login.html" class="btn btn-outline btn-sm">Log in</a>
-<a href="signup.html" class="btn btn-accent btn-sm">Sign up</a>
+<a href="cart.php" class="btn btn-ghost btn-sm">Cart · <?= e($cart_count); ?></a>
+<a href="login.php" class="btn btn-outline btn-sm">Log in</a>
+<a href="signup.php" class="btn btn-accent btn-sm">Sign up</a>
 </div>
 
 </div>
@@ -65,22 +131,29 @@ pottery, textiles, jewelry, woodwork and more.
 <h4>Category</h4>
 
 <ul>
-<li><a href="#" class="active">All products</a></li>
-<li><a href="#">Ceramics</a></li>
-<li><a href="#">Textiles</a></li>
-<li><a href="#">Jewelry</a></li>
-<li><a href="#">Woodwork</a></li>
-<li><a href="#">Paintings</a></li>
+<li>
+  <a href="shop.php" class="<?= $category_id === 0 ? 'active' : ''; ?>">
+    All products
+  </a>
+</li>
+
+<?php foreach ($categories as $category): ?>
+<li>
+  <a href="shop.php?category_id=<?= e($category['category_id']); ?>" class="<?= $category_id === (int)$category['category_id'] ? 'active' : ''; ?>">
+    <?= e($category['name']); ?>
+  </a>
+</li>
+<?php endforeach; ?>
 </ul>
 
 </aside>
 
-<div>
+<div class="shop-content">
 
 <div class="shop-toolbar">
 
 <div class="shop-count">
-Showing <strong>9</strong> of 248 products
+Showing <strong><?= e(count($products)); ?></strong> products
 </div>
 
 <select class="select" style="width:auto">
@@ -91,60 +164,45 @@ Showing <strong>9</strong> of 248 products
 
 <div class="product-grid">
 
+<?php foreach ($products as $product): ?>
+
 <?php
-
-$sql = "
-SELECT p.product_id, p.title, p.price, ap.shop_name, MIN(pi.image_url) AS image_url
-FROM products p
-JOIN artisan_profiles ap ON p.artisan_id = ap.user_id
-LEFT JOIN product_images pi ON p.product_id = pi.product_id
-GROUP BY p.product_id, p.title, p.price, ap.shop_name
-";
-
-$stmt = $db->query($sql);
-$products = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-foreach ($products as $product) {
-
+$image_url = productImageUrl($product['image_urls'] ?? '');
 ?>
 
-<a href="product.php?id=<?php echo $product['product_id']; ?>"?id=<?php echo $product['product_id']; ?>" class="p-card">
+<a href="product.php?id=<?= e($product['product_id']); ?>" class="p-card">
 
 <div class="p-thumb">
 
-<?php if (!empty($product['image_url'])) { ?>
-
+<?php if ($image_url !== ''): ?>
 <img
-src="<?php echo $product['image_url']; ?>"
-alt="<?php echo $product['title']; ?>"
-style="width:100%; height:100%; object-fit:cover;"
+src="<?= e($image_url); ?>"
+alt="<?= e($product['title']); ?>"
+style="width:100%;height:100%;object-fit:cover;display:block;"
 >
-
-<?php } ?>
+<?php endif; ?>
 
 </div>
 
 <div class="p-body">
 
 <div class="p-title">
-<?php echo $product['title']; ?>
+<?= e($product['title']); ?>
 </div>
 
 <div class="p-maker">
-<?php echo $product['shop_name']; ?>
+<?= e($product['shop_name']); ?>
 </div>
 
 <div class="p-price">
-€<?php echo $product['price']; ?>
+€<?= e(number_format((float)$product['price'], 2)); ?>
 </div>
 
 </div>
 
 </a>
 
-<?php
-}
-?>
+<?php endforeach; ?>
 
 </div>
 

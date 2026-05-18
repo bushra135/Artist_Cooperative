@@ -1,15 +1,24 @@
 <?php
 include 'connection.php';
+include 'image-path.php';
+
+function e($value) {
+    return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
+}
 
 $sql = "
-SELECT 
-  ap.user_id,
-  ap.shop_name,
-  COUNT(p.product_id) AS product_count
+SELECT
+    MIN(ap.user_id) AS user_id,
+    ap.shop_name,
+    COALESCE(MAX(NULLIF(ap.bio, '')), '') AS bio,
+    COALESCE(MAX(NULLIF(ap.location, '')), 'Bahrain') AS location,
+    COALESCE(MAX(NULLIF(ap.avatar, '')), '') AS avatar,
+    COALESCE(MAX(NULLIF(ap.cover_photo, '')), '') AS cover_photo,
+    COUNT(DISTINCT p.product_id) AS product_count
 FROM artisan_profiles ap
-LEFT JOIN products p ON ap.user_id = p.artisan_id
-GROUP BY ap.user_id, ap.shop_name
-ORDER BY ap.user_id
+LEFT JOIN products p ON p.artisan_id = ap.user_id
+GROUP BY ap.shop_name
+ORDER BY user_id
 ";
 
 $stmt = $db->query($sql);
@@ -30,14 +39,14 @@ $artisans = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <body>
 <header class="site-header">
   <div class="nav-inner">
-    <a class="brand" href="index.html">Arti<span>san</span></a>
+    <a class="brand" href="index.php">Arti<span>san</span></a>
 
     <nav class="nav-links">
-      <a href="index.html">About site</a>
-      <a href="home.html">Home</a>
+      <a href="index.php">About site</a>
+      <a href="home.php">Home</a>
       <a href="shop.php">Shop</a>
       <a href="artists.php" class="active">Artisans</a>
-      <a href="about.html">About</a>
+      <a href="about.php">About</a>
     </nav>
 
     <div class="nav-actions">
@@ -61,36 +70,58 @@ $artisans = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <section class="container">
   <div class="artists-grid">
 
-    <?php 
+    <?php
     $i = 1;
-    foreach ($artisans as $artisan) { 
+
+    foreach ($artisans as $artisan) {
+        $avatar_url = storedImageUrl($artisan['avatar'] ?? '');
+        $cover_url = storedImageUrl($artisan['cover_photo'] ?? '');
+        $bio = trim($artisan['bio'] ?? '');
+
+        if ($bio === '') {
+            $bio = 'Handmade products created with care by this artisan.';
+        }
     ?>
 
-      <a href="artisan-profile.php?id=<?php echo $artisan['user_id']; ?>" class="artist-card">
+      <a href="artisan-profile.php?id=<?php echo e($artisan['user_id']); ?>" class="artist-card">
 
-        <div class="artist-cover c<?php echo $i; ?>"></div>
+        <div class="artist-cover c<?php echo e($i); ?>">
+          <?php if ($cover_url !== '') { ?>
+            <img
+              src="<?php echo e($cover_url); ?>"
+              alt="<?php echo e($artisan['shop_name']); ?>"
+              style="width:100%;height:100%;object-fit:cover;display:block;"
+            >
+          <?php } ?>
+        </div>
 
         <div class="artist-body">
-          <div class="artist-av a<?php echo $i; ?>"></div>
+          <div class="artist-av a<?php echo e($i); ?>">
+            <?php if ($avatar_url !== '') { ?>
+              <img
+                src="<?php echo e($avatar_url); ?>"
+                alt="<?php echo e($artisan['shop_name']); ?>"
+                style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;"
+              >
+            <?php } ?>
+          </div>
 
-          <h3><?php echo $artisan['shop_name']; ?></h3>
+          <h3><?php echo e($artisan['shop_name']); ?></h3>
 
-          <div class="loc">📍 Bahrain</div>
+          <div class="loc">📍 <?php echo e($artisan['location']); ?></div>
 
-          <p>Handmade products created with care by this artisan.</p>
+          <p><?php echo e($bio); ?></p>
 
           <div class="artist-stats">
-            <span>★ 4.9</span>
-            <span>· 142 sold</span>
-            <span>· <?php echo $artisan['product_count']; ?> products</span>
+            <span><?php echo e((int)$artisan['product_count']); ?> products</span>
           </div>
         </div>
 
       </a>
 
-    <?php 
+    <?php
       $i++;
-    } 
+    }
     ?>
 
   </div>
@@ -102,7 +133,7 @@ $artisans = $stmt->fetchAll(PDO::FETCH_ASSOC);
   <div class="container">
 
     <div>
-      <a class="brand" href="index.html">Arti<span>san</span></a>
+      <a class="brand" href="index.php">Arti<span>san</span></a>
       <p class="footer-tag">
         A cooperative marketplace for handmade pottery, textiles, jewelry, and woodwork from independent makers.
       </p>
@@ -125,8 +156,8 @@ $artisans = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     <div>
       <h4>Company</h4>
-      <a href="about.html">About</a>
-      <a href="contact.html">Contact</a>
+      <a href="about.php">About</a>
+      <a href="contact.php">Contact</a>
       <a href="#">Help center</a>
     </div>
 

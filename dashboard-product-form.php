@@ -49,7 +49,7 @@ function uploadProductImage($product_id) {
 }
 
 $artisan_stmt = $db->prepare("
-    SELECT user_id, shop_name, verification_status
+    SELECT user_id, shop_name, verification_status, avatar
     FROM artisan_profiles
     WHERE user_id = ?
     LIMIT 1
@@ -60,6 +60,13 @@ $artisan = $artisan_stmt->fetch(PDO::FETCH_ASSOC);
 $shop_name = $artisan ? $artisan['shop_name'] : 'Maison Clay';
 $verification_status = $artisan ? ucfirst($artisan['verification_status']) : 'Verified';
 $artisan_id = $artisan ? (int)$artisan['user_id'] : $user_id;
+$avatar = $artisan['avatar'] ?? '';
+$has_avatar = false;
+
+if (!empty($avatar)) {
+    $avatar_file = __DIR__ . DIRECTORY_SEPARATOR . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $avatar);
+    $has_avatar = file_exists($avatar_file);
+}
 
 $categories_stmt = $db->query("
     SELECT category_id, name
@@ -207,6 +214,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <meta name="description" content="Create or edit a product.">
 <link rel="stylesheet" href="css/global.css">
 <link rel="stylesheet" href="css/dash-form.css">
+
+<style>
+  .side .av{
+    overflow:hidden;
+  }
+
+  .side .av img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+  }
+</style>
 </head>
 
 <body>
@@ -231,7 +251,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <main>
 <section class="container dash-wrap">
   <aside class="side">
-    <div class="av"></div>
+    <div class="av">
+      <?php if ($has_avatar): ?>
+        <img src="<?= e($avatar); ?>" alt="<?= e($shop_name); ?>">
+      <?php endif; ?>
+    </div>
     <h3><?= e($shop_name); ?></h3>
     <div class="role">Artisan · <?= e($verification_status); ?></div>
     <nav>

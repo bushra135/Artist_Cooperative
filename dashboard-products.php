@@ -10,6 +10,7 @@ if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'artisan') {
 }
 
 include 'connection.php';
+include 'image-path.php';
 
 $user_id = (int)$_SESSION['user_id'];
 
@@ -216,19 +217,14 @@ $low_stock_count = (int)$low_stock_stmt->fetchColumn();
             <?php
               $colors = ['#8AA38B', '#C2562E', '#D89A2A', '#6B8E4E', '#B23A2A'];
               $thumb_color = $colors[$index % count($colors)];
-              $image_file = '';
-              $has_image = false;
-
-              if (!empty($product['image_url'])) {
-                  $image_file = __DIR__ . DIRECTORY_SEPARATOR . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $product['image_url']);
-                  $has_image = file_exists($image_file);
-              }
+              $image_url = storedImageUrl($product['image_url'] ?? '');
+              $has_image = $image_url !== '';
             ?>
             <tr>
               <td>
                 <div class="thumb <?= $has_image ? '' : 'placeholder'; ?>" style="background:<?= e($thumb_color); ?>">
                   <?php if ($has_image): ?>
-                    <img src="<?= e($product['image_url']); ?>" alt="<?= e($product['title']); ?>">
+                    <img src="<?= e($image_url); ?>" alt="<?= e($product['title']); ?>">
                   <?php endif; ?>
                 </div>
               </td>

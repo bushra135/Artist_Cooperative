@@ -42,7 +42,7 @@ function badgeClass($status) {
 }
 
 $stmt = $db->prepare("
-    SELECT shop_name, verification_status
+    SELECT shop_name, verification_status, avatar
     FROM artisan_profiles
     WHERE user_id = ?
     LIMIT 1
@@ -52,6 +52,13 @@ $artisan = $stmt->fetch(PDO::FETCH_ASSOC);
 
 $shop_name = $artisan ? $artisan['shop_name'] : 'Maison Clay';
 $verification_status = $artisan ? ucfirst($artisan['verification_status']) : 'Verified';
+$avatar = $artisan['avatar'] ?? '';
+$has_avatar = false;
+
+if (!empty($avatar)) {
+    $avatar_file = __DIR__ . DIRECTORY_SEPARATOR . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $avatar);
+    $has_avatar = file_exists($avatar_file);
+}
 
 $revenue_stmt = $db->prepare("
     SELECT COALESCE(SUM(quantity * unit_price), 0)
@@ -127,6 +134,17 @@ $recent_orders = $recent_orders_stmt->fetchAll(PDO::FETCH_ASSOC);
 <link rel="stylesheet" href="css/dashboard.css">
 
 <style>
+  .side .av{
+    overflow:hidden;
+  }
+
+  .side .av img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+  }
+
   .dash-wrap{
     padding:42px 0 80px;
     grid-template-columns:260px 1fr;
@@ -218,7 +236,11 @@ $recent_orders = $recent_orders_stmt->fetchAll(PDO::FETCH_ASSOC);
 <section class="container dash-wrap">
 
   <aside class="side">
-    <div class="av"></div>
+    <div class="av">
+      <?php if ($has_avatar): ?>
+        <img src="<?= e($avatar); ?>" alt="<?= e($shop_name); ?>">
+      <?php endif; ?>
+    </div>
 
     <h3><?= e($shop_name); ?></h3>
 

@@ -1,8 +1,18 @@
 <?php
 session_start();
-include 'connection.php';
 
-$user_id = 1; // Temporary until login sessions are ready
+$_SESSION['user_id'] = 1;
+$_SESSION['role'] = 'artisan';
+
+if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'artisan') {
+    header("Location: login.html");
+    exit;
+}
+
+include 'connection.php';
+include 'image-path.php';
+
+$user_id = (int)$_SESSION['user_id'];
 $message = '';
 $error = '';
 
@@ -10,37 +20,46 @@ function e($value) {
     return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
 }
 
-function uploadAvatar($user_id) {
-    if (!isset($_FILES['avatar']) || $_FILES['avatar']['error'] === UPLOAD_ERR_NO_FILE) {
+function uploadProfileImage($field_name, $user_id, $prefix, $folder) {
+    if (!isset($_FILES[$field_name]) || $_FILES[$field_name]['error'] === UPLOAD_ERR_NO_FILE) {
         return null;
     }
 
-    if ($_FILES['avatar']['error'] !== UPLOAD_ERR_OK) {
-        throw new Exception('Avatar upload failed. Please try again.');
+    if ($_FILES[$field_name]['error'] !== UPLOAD_ERR_OK) {
+        throw new Exception('Image upload failed. Please try again.');
     }
 
     $allowed_extensions = ['jpg', 'jpeg', 'png', 'webp'];
-    $original_name = $_FILES['avatar']['name'];
+    $allowed_mimes = ['image/jpeg', 'image/png', 'image/webp'];
+    $original_name = $_FILES[$field_name]['name'];
     $extension = strtolower(pathinfo($original_name, PATHINFO_EXTENSION));
 
     if (!in_array($extension, $allowed_extensions, true)) {
-        throw new Exception('Please upload a JPG, JPEG, PNG, or WEBP avatar.');
+        throw new Exception('Please upload a JPG, JPEG, PNG, or WEBP image.');
     }
 
-    $upload_dir = __DIR__ . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'avatars';
+    $file_info = finfo_open(FILEINFO_MIME_TYPE);
+    $mime_type = finfo_file($file_info, $_FILES[$field_name]['tmp_name']);
+    finfo_close($file_info);
+
+    if (!in_array($mime_type, $allowed_mimes, true)) {
+        throw new Exception('Please upload a valid image file.');
+    }
+
+    $upload_dir = __DIR__ . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . $folder;
 
     if (!is_dir($upload_dir)) {
-        mkdir($upload_dir, 0777, true);
+        mkdir($upload_dir, 0755, true);
     }
 
-    $file_name = 'avatar_' . $user_id . '_' . uniqid('', true) . '.' . $extension;
+    $file_name = $prefix . '_' . $user_id . '_' . bin2hex(random_bytes(8)) . '.' . $extension;
     $target_path = $upload_dir . DIRECTORY_SEPARATOR . $file_name;
 
-    if (!move_uploaded_file($_FILES['avatar']['tmp_name'], $target_path)) {
-        throw new Exception('Could not save uploaded avatar.');
+    if (!move_uploaded_file($_FILES[$field_name]['tmp_name'], $target_path)) {
+        throw new Exception('Could not save uploaded image.');
     }
 
-    return 'uploads/avatars/' . $file_name;
+    return 'uploads/' . $folder . '/' . $file_name;
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -52,7 +71,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $website = trim($_POST['website'] ?? '');
 
     try {
-        $avatar_path = uploadAvatar($user_id);
+        $avatar_path = uploadProfileImage('avatar', $user_id, 'avatar', 'avatars');
+        $cover_path = uploadProfileImage('cover_photo', $user_id, 'cover', 'covers');
 
         $update_user = $db->prepare("
             UPDATE users
@@ -70,28 +90,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $profile_exists = (int)$profile_exists_stmt->fetchColumn() > 0;
 
         if ($profile_exists) {
+            $fields = [
+                'shop_name = ?',
+                'bio = ?',
+                'location = ?',
+                'website = ?'
+            ];
+
+            $values = [$shop_name, $bio, $location, $website];
+
             if ($avatar_path !== null) {
-                $update_profile = $db->prepare("
-                    UPDATE artisan_profiles
-                    SET shop_name = ?, bio = ?, location = ?, website = ?, avatar = ?
-                    WHERE user_id = ?
-                ");
-                $update_profile->execute([$shop_name, $bio, $location, $website, $avatar_path, $user_id]);
-            } else {
-                $update_profile = $db->prepare("
-                    UPDATE artisan_profiles
-                    SET shop_name = ?, bio = ?, location = ?, website = ?
-                    WHERE user_id = ?
-                ");
-                $update_profile->execute([$shop_name, $bio, $location, $website, $user_id]);
+                $fields[] = 'avatar = ?';
+                $values[] = $avatar_path;
             }
+
+            if ($cover_path !== null) {
+                $fields[] = 'cover_photo = ?';
+                $values[] = $cover_path;
+            }
+
+            $values[] = $user_id;
+
+            $update_profile = $db->prepare("
+                UPDATE artisan_profiles
+                SET " . implode(', ', $fields) . "
+                WHERE user_id = ?
+            ");
+            $update_profile->execute($values);
         } else {
             $insert_profile = $db->prepare("
                 INSERT INTO artisan_profiles
                 (user_id, shop_name, craft_specialty, bio, location, website, avatar, cover_photo, member_since, verification_status)
-                VALUES (?, ?, 'Pottery', ?, ?, ?, ?, '', CURDATE(), 'pending')
+                VALUES (?, ?, 'Pottery', ?, ?, ?, ?, ?, CURDATE(), 'pending')
             ");
-            $insert_profile->execute([$user_id, $shop_name, $bio, $location, $website, $avatar_path ?? '']);
+            $insert_profile->execute([
+                $user_id,
+                $shop_name,
+                $bio,
+                $location,
+                $website,
+                $avatar_path ?? '',
+                $cover_path ?? ''
+            ]);
         }
 
         $message = 'Profile saved successfully.';
@@ -111,6 +151,7 @@ $stmt = $db->prepare("
         artisan_profiles.location,
         artisan_profiles.website,
         artisan_profiles.avatar,
+        artisan_profiles.cover_photo,
         artisan_profiles.member_since,
         artisan_profiles.verification_status
     FROM users
@@ -132,13 +173,8 @@ $avatar = $profile['avatar'] ?? '';
 $member_since = !empty($profile['member_since']) ? date('Y', strtotime($profile['member_since'])) : '2024';
 $verification_status = !empty($profile['verification_status']) ? ucfirst($profile['verification_status']) : 'Verified';
 
-$avatar_file = '';
-$has_avatar = false;
-
-if (!empty($avatar)) {
-    $avatar_file = __DIR__ . DIRECTORY_SEPARATOR . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $avatar);
-    $has_avatar = file_exists($avatar_file);
-}
+$avatar_url = storedImageUrl($avatar);
+$has_avatar = $avatar_url !== '';
 ?>
 
 <!doctype html>
@@ -188,8 +224,8 @@ if (!empty($avatar)) {
     </nav>
     <div class="nav-actions">
       <a href="cart.php" class="btn btn-ghost btn-sm">Cart · 2</a>
-      <a href="login.php" class="btn btn-outline btn-sm">Log in</a>
-      <a href="signup.php" class="btn btn-accent btn-sm">Sign up</a>
+      <a href="login.html" class="btn btn-outline btn-sm">Log in</a>
+      <a href="signup.html" class="btn btn-accent btn-sm">Sign up</a>
     </div>
   </div>
 </header>
@@ -199,7 +235,7 @@ if (!empty($avatar)) {
   <aside class="side">
     <div class="av">
       <?php if ($has_avatar): ?>
-        <img src="<?= e($avatar); ?>" alt="<?= e($shop_name); ?>">
+        <img src="<?= e($avatar_url); ?>" alt="<?= e($shop_name); ?>">
       <?php endif; ?>
     </div>
     <h3><?= e($shop_name); ?></h3>
@@ -282,7 +318,7 @@ if (!empty($avatar)) {
 
           <div class="field">
             <label>Cover photo <span class="muted">(optional)</span></label>
-            <input class="input" type="file">
+            <input class="input" type="file" name="cover_photo" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
           </div>
         </div>
 
@@ -300,7 +336,7 @@ if (!empty($avatar)) {
           </div>
         </div>
 
-        <a href="login.php" class="btn btn-outline btn-block btn-logout">Log out</a>
+        <a href="login.html" class="btn btn-outline btn-block btn-logout">Log out</a>
       </aside>
     </form>
   </div>
@@ -323,7 +359,7 @@ if (!empty($avatar)) {
     <div>
       <h4>Makers</h4>
       <a href="artists.php">All artisans</a>
-      <a href="signup.php?role=artisan">Become a maker</a>
+      <a href="signup.html?role=artisan">Become a maker</a>
       <a href="dashboard.php">Maker dashboard</a>
     </div>
     <div>
